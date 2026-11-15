@@ -1,0 +1,46 @@
+name: Update CRM
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install cryptography
+      - name: Pull data and encrypt it
+        env:
+          CRM_PASSCODE: ${{ secrets.CRM_PASSCODE }}
+          MAKE_API_TOKEN: ${{ secrets.MAKE_API_TOKEN }}
+          MANYREACH_API_KEY: ${{ secrets.MANYREACH_API_KEY }}
+          MANYREACH_API_KEY_2: ${{ secrets.MANYREACH_API_KEY_2 }}
+          CAL_API_KEY: ${{ secrets.CAL_API_KEY }}
+        run: |
+          mkdir -p site
+          cp index.html site/index.html
+          python scripts/fetch_data.py site/data.enc.json
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4
