@@ -161,15 +161,35 @@ def main():
         except Exception as e:
             views = []; errors.append(f"Video watch tracker: {e}")
         camps, sent = [], {}
-        for env, label in (("MANYREACH_API_KEY", "Everly"), ("MANYREACH_API_KEY_2", "Animohub")):
-            if os.environ.get(env):
-                try:
-                    c, s = manyreach(os.environ[env], label)
-                    camps += c
-                    for k, v in s.items():
-                        sent.setdefault(k, []).extend(v)
-                except Exception as e:
-                    errors.append(f"ManyReach ({label}): {e}")
+        keys = [(os.environ[e], l) for e, l in (("MANYREACH_API_KEY", "key 1"), ("MANYREACH_API_KEY_2", "key 2")) if os.environ.get(e)]
+        # An organisation key can also list its workspaces with their own keys: scan those too.
+        for k, _ in list(keys):
+            try:
+                ws = get(f"{MR}/workspaces?limit=30", {"X-API-Key": k})
+                ws = ws.get("items", []) if isinstance(ws, dict) else ws
+                found = [(w.get("apiKey"), w.get("title") or str(w.get("workspaceId"))) for w in ws if w.get("apiKey")]
+                print(f"DIAG workspaces visible={len(ws)} with_keys={len(found)}")
+                keys += [f for f in found if f[0] not in {x[0] for x in keys}]
+            except Exception as e:
+                print(f"DIAG workspaces not readable with this key: {str(e)[:80]}")
+        seen_ids = set()
+        for key, label in keys:
+            try:
+                c, s = manyreach(key, label)
+                for x in c:
+                    if x["id"] not in seen_ids:
+                        seen_ids.add(x["id"]); camps.append(x)
+                for k2, v in s.items():
+                    sent.setdefault(k2, []).extend(v)
+            except Exception as e:
+                errors.append(f"ManyReach ({label}): {e}")
+        if camps:  # the "wrong workspace" notes only matter if nothing was found anywhere
+            errors[:] = [x for x in errors if "none is named 'Video lead magnet'" not in x]
+        for e2 in sent:  # the same message can arrive via two keys
+            uniq = {}
+            for m in sent[e2]:
+                uniq.setdefault((m["t"], m["body"][:80]), m)
+            sent[e2] = sorted(uniq.values(), key=lambda m: m["t"] or "")
         try:
             meetings = cal_bookings()
         except Exception as e:
