@@ -65,9 +65,16 @@ def mr_pages(path, key, params, cap=10):
     for page in range(1, cap + 1):
         q = urllib.parse.urlencode({**params, "limit": 30, "page": page})
         r = get(f"{MR}{path}?{q}", {"X-API-Key": key})
-        got = r.get("items", r if isinstance(r, list) else [])
+        if isinstance(r, list):
+            got, total = r, 0
+        else:
+            got = r.get("items") or r.get("data") or r.get("campaigns") or r.get("results") or []
+            if isinstance(got, dict):
+                got = got.get("items") or got.get("campaigns") or []
+            total = (r.get("pagination") or r.get("meta") or {}).get("totalItems", 0)
+            if page == 1 and path == "/campaigns":
+                print(f"DIAG {path}: response keys={sorted(r.keys())[:8]} items_on_page={len(got)} total={total}")
         items += got
-        total = (r.get("pagination") or {}).get("totalItems", 0) if isinstance(r, dict) else 0
         if not got or page * 30 >= total:
             break
     return items
@@ -75,7 +82,12 @@ def mr_pages(path, key, params, cap=10):
 
 def manyreach(key, label):
     camps, sent = [], {}
-    for c in mr_pages("/campaigns", key, {}):
+    listed = mr_pages("/campaigns", key, {})
+    video = [c for c in listed if "video lead magnet" in (c.get("name") or "").lower()]
+    print(f"DIAG ManyReach {label}: {len(listed)} campaigns listed, {len(video)} named 'Video lead magnet' (tests included)")
+    if listed and not video:
+        errors.append(f"ManyReach ({label}): the key reaches {len(listed)} campaigns but none is named 'Video lead magnet'. It may be the wrong workspace's key.")
+    for c in listed:
         name = c.get("name") or ""
         if "video lead magnet" not in name.lower() or name.lower().startswith("test"):
             continue
