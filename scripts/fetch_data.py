@@ -72,8 +72,6 @@ def mr_pages(path, key, params, cap=10):
             if isinstance(got, dict):
                 got = got.get("items") or got.get("campaigns") or []
             total = (r.get("pagination") or r.get("meta") or {}).get("totalItems", 0)
-            if page == 1 and path == "/campaigns":
-                print(f"DIAG {path}: response keys={sorted(r.keys())[:8]} items_on_page={len(got)} total={total}")
         items += got
         if not got or page * 30 >= total:
             break
@@ -84,9 +82,8 @@ def manyreach(key, label):
     camps, sent = [], {}
     listed = mr_pages("/campaigns", key, {})
     video = [c for c in listed if "video lead magnet" in (c.get("name") or "").lower()]
-    print(f"DIAG ManyReach {label}: {len(listed)} campaigns listed, {len(video)} named 'Video lead magnet' (tests included)")
     if listed and not video:
-        errors.append(f"ManyReach ({label}): the key reaches {len(listed)} campaigns but none is named 'Video lead magnet'. It may be the wrong workspace's key.")
+        errors.append(f"ManyReach: a key reaches {len(listed)} campaigns but none is named 'Video lead magnet'. It may be the wrong workspace's key.")
     for c in listed:
         name = c.get("name") or ""
         if "video lead magnet" not in name.lower() or name.lower().startswith("test"):
@@ -168,10 +165,9 @@ def main():
                 ws = get(f"{MR}/workspaces?limit=30", {"X-API-Key": k})
                 ws = ws.get("items", []) if isinstance(ws, dict) else ws
                 found = [(w.get("apiKey"), w.get("title") or str(w.get("workspaceId"))) for w in ws if w.get("apiKey")]
-                print(f"DIAG workspaces visible={len(ws)} with_keys={len(found)}")
                 keys += [f for f in found if f[0] not in {x[0] for x in keys}]
             except Exception as e:
-                print(f"DIAG workspaces not readable with this key: {str(e)[:80]}")
+                pass  # not an organisation key
         seen_ids = set()
         for key, label in keys:
             try:

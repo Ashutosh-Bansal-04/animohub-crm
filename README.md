@@ -13,8 +13,8 @@ A GitHub Action pulls fresh data every 15 minutes, encrypts it with the team pas
 |---|---|---|
 | `CRM_PASSCODE` | yes | The passcode the team types to open the CRM. Use 16 or more characters. |
 | `MAKE_API_TOKEN` | yes | Make → Profile → API access → Add token, scope `datastores:read`. |
-| `MANYREACH_API_KEY` | yes | ManyReach API key of the Everly workspace. |
-| `MANYREACH_API_KEY_2` | no | ManyReach API key of the Animohub workspace, once it runs video campaigns. |
+| `MANYREACH_API_KEY` | yes | Your main ManyReach (organisation) API key. The job also reads every workspace under it, Everly included. |
+| `MANYREACH_API_KEY_2` | no | Only needed for a workspace the main key cannot reach. |
 | `CAL_API_KEY` | no | cal.com → Settings → Developer → API keys. Turns on the Meetings tab. |
 
 3. **Actions → Update CRM → Run workflow.** When it finishes, the page address is shown on the run and under Settings → Pages.
